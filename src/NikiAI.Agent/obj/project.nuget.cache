@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "80u3kP+/8Y4=",
+  "success": true,
+  "projectFilePath": "D:\\2! Admin - Productivity\\Antigravity Projects\\NiKi AI\\src\\NikiAI.Agent\\NikiAI.Agent.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\samiu\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\samiu\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.0\\microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\samiu\\.nuget\\packages\\system.security.cryptography.protecteddata\\8.0.0\\system.security.cryptography.protecteddata.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

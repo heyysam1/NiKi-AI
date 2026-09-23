@@ -1,0 +1,15 @@
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\bin\Debug\net8.0\NikiAI.Memory.deps.json
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\bin\Debug\net8.0\NikiAI.Memory.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\bin\Debug\net8.0\NikiAI.Memory.pdb
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\bin\Debug\net8.0\NikiAI.Core.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\bin\Debug\net8.0\NikiAI.Core.pdb
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.Memory.csproj.AssemblyReference.cache
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.Memory.GeneratedMSBuildEditorConfig.editorconfig
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.Memory.AssemblyInfoInputs.cache
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.Memory.AssemblyInfo.cs
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.Memory.csproj.CoreCompileInputs.cache
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.M.177FF044.Up2Date
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.Memory.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\refint\NikiAI.Memory.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\NikiAI.Memory.pdb
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Memory\obj\Debug\net8.0\ref\NikiAI.Memory.dll

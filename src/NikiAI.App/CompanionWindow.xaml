@@ -1,0 +1,111 @@
+<Window x:Class="NikiAI.App.CompanionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:NikiAI.App.Controls"
+        mc:Ignorable="d"
+        Title="Niki AI Companion"
+        Width="150"
+        Height="100"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Focusable="False"
+        WindowStartupLocation="Manual"
+        MouseEnter="OnWindowMouseEnter"
+        MouseLeave="OnWindowMouseLeave"
+        MouseLeftButtonDown="OnWindowMouseLeftButtonDown"
+        MouseDoubleClick="OnWindowMouseDoubleClick"
+        MouseMove="OnWindowMouseMove"
+        MouseLeftButtonUp="OnWindowMouseLeftButtonUp">
+
+    <Window.ContextMenu>
+        <ContextMenu Background="{StaticResource Surface1Brush}" BorderBrush="{StaticResource BorderBrush}">
+            <MenuItem Header="Niki AI Companion" IsEnabled="False" Foreground="{StaticResource PrimaryBrandBrush}" FontWeight="Bold" />
+            <Separator Background="{StaticResource BorderBrush}" />
+
+            <!-- AI Chat Workspace (Phase 4) -->
+            <MenuItem Header="Assistant Chat" Click="OnOpenChatClick" Foreground="{StaticResource PrimaryBrandBrush}" FontWeight="SemiBold" />
+
+            <!-- Voice Interaction (Phase 12) -->
+            <MenuItem x:Name="MenuItemVoiceCommand" Header="Voice Command (Push-to-Talk)" Click="OnVoiceCommandClick" Foreground="{StaticResource PrimaryBrandBrush}" FontWeight="SemiBold" />
+
+            <!-- Task System & History Access (Phase 3) -->
+            <MenuItem Header="Tasks &amp; History" Click="OnOpenTasksClick" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" />
+
+            <!-- Memory & Privacy Management (Phase 10) -->
+            <MenuItem Header="Memory &amp; Privacy" Click="OnOpenMemoryManagementClick" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" />
+
+            <!-- Widget Shelf (Phase 11) -->
+            <MenuItem Header="Widgets..." Click="OnOpenWidgetsClick" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" />
+
+            <!-- Workflows (Phase 13) -->
+            <MenuItem Header="Workflows..." Click="OnOpenWorkflowsClick" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" />
+            <Separator Background="{StaticResource BorderBrush}" />
+
+            <!-- Character Selection (Phase 2 / Phase 16 Polish) -->
+            <MenuItem Header="Companion Character" Foreground="{StaticResource TextPrimaryBrush}">
+                <MenuItem x:Name="MenuItemCharNiki" Header="Niki" Click="OnSelectCharacterNikiClick" Foreground="{StaticResource TextPrimaryBrush}" IsChecked="True" />
+                <MenuItem x:Name="MenuItemCharBiscuit" Header="Dog (Biscuit)" Click="OnSelectCharacterBiscuitClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem x:Name="MenuItemCharMochi" Header="Mochi (Deprecated)" Click="OnSelectCharacterMochiClick" Visibility="Collapsed" />
+            </MenuItem>
+
+            <!-- State Preview Submenu (Phase 2) -->
+            <MenuItem Header="State Preview" Foreground="{StaticResource TextPrimaryBrush}">
+                <MenuItem Header="Idle" Click="OnStateIdleClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem Header="Listening" Click="OnStateListeningClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem Header="Thinking" Click="OnStateThinkingClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem Header="Working" Click="OnStateWorkingClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem Header="Happy" Click="OnStateHappyClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem Header="Notification" Click="OnStateNotificationClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem Header="Sleep" Click="OnStateSleepClick" Foreground="{StaticResource TextPrimaryBrush}" />
+            </MenuItem>
+            <Separator Background="{StaticResource BorderBrush}" />
+
+            <!-- Size Presets -->
+            <MenuItem Header="Size" Foreground="{StaticResource TextPrimaryBrush}">
+                <MenuItem x:Name="MenuItemSizeCompact" Header="Compact (100 × 70)" Click="OnSizeCompactClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem x:Name="MenuItemSizeStandard" Header="Standard (150 × 100)" Click="OnSizeStandardClick" Foreground="{StaticResource TextPrimaryBrush}" IsChecked="True" />
+                <MenuItem x:Name="MenuItemSizeLarge" Header="Large (200 × 135)" Click="OnSizeLargeClick" Foreground="{StaticResource TextPrimaryBrush}" />
+            </MenuItem>
+
+            <!-- Opacity Presets -->
+            <MenuItem Header="Opacity" Foreground="{StaticResource TextPrimaryBrush}">
+                <MenuItem x:Name="MenuItemOpacity100" Header="100%" Click="OnOpacity100Click" Foreground="{StaticResource TextPrimaryBrush}" IsChecked="True" />
+                <MenuItem x:Name="MenuItemOpacity85" Header="85%" Click="OnOpacity85Click" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem x:Name="MenuItemOpacity70" Header="70%" Click="OnOpacity70Click" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem x:Name="MenuItemOpacity50" Header="50%" Click="OnOpacity50Click" Foreground="{StaticResource TextPrimaryBrush}" />
+            </MenuItem>
+
+            <!-- Topmost Toggle -->
+            <MenuItem x:Name="MenuItemAlwaysOnTop" Header="Always on Top" IsCheckable="True" IsChecked="True" Click="OnAlwaysOnTopToggleClick" Foreground="{StaticResource TextPrimaryBrush}" />
+
+            <!-- Reduced Motion Toggle (Phase 16) -->
+            <MenuItem x:Name="MenuItemReducedMotion" Header="Reduced Motion" IsCheckable="True" Click="OnReducedMotionToggleClick" Foreground="{StaticResource TextPrimaryBrush}" />
+
+            <!-- Application Lifecycle Settings -->
+            <Separator Background="{StaticResource BorderBrush}" />
+            <MenuItem x:Name="MenuItemStartWithWindows" Header="Start with Windows" IsCheckable="True" Click="OnStartWithWindowsToggleClick" Foreground="{StaticResource TextPrimaryBrush}" />
+            <MenuItem Header="Close Behavior" Foreground="{StaticResource TextPrimaryBrush}">
+                <MenuItem x:Name="MenuItemCloseMinimize" Header="Minimize to Tray" IsChecked="True" Click="OnCloseMinimizeClick" Foreground="{StaticResource TextPrimaryBrush}" />
+                <MenuItem x:Name="MenuItemCloseExit" Header="Exit Application" Click="OnCloseExitClick" Foreground="{StaticResource TextPrimaryBrush}" />
+            </MenuItem>
+
+            <Separator Background="{StaticResource BorderBrush}" />
+            <MenuItem Header="Reset to Bottom-Right" Click="OnResetPositionClick" Foreground="{StaticResource TextPrimaryBrush}" />
+            <MenuItem Header="Hide Desktop Pet" Click="OnHidePetClick" Foreground="{StaticResource TextSecondaryBrush}" />
+            <Separator Background="{StaticResource BorderBrush}" />
+            <MenuItem Header="Exit Niki AI" Click="OnExitMenuItemClick" Foreground="{StaticResource StatusErrorBrush}" />
+        </ContextMenu>
+    </Window.ContextMenu>
+
+    <!-- Transparent Free-Floating Character Container (Zero Boxed Cards / Buttons) -->
+    <Grid x:Name="CompanionRootGrid" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <controls:CharacterView x:Name="CharacterDisplay" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5, 0.5" />
+        <controls:ExpressionOverlayControl x:Name="ExpressionOverlay" HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </Grid>
+</Window>

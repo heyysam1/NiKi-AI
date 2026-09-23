@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NikiAI.Core\NikiAI.Core.csproj" />
+    <ProjectReference Include="..\NikiAI.Security\NikiAI.Security.csproj" />
+    <ProjectReference Include="..\NikiAI.Agent\NikiAI.Agent.csproj" />
+    <ProjectReference Include="..\NikiAI.Tools\NikiAI.Tools.csproj" />
+    <ProjectReference Include="..\NikiAI.Automation\NikiAI.Automation.csproj" />
+    <ProjectReference Include="..\NikiAI.Browser\NikiAI.Browser.csproj" />
+    <ProjectReference Include="..\NikiAI.Memory\NikiAI.Memory.csproj" />
+    <ProjectReference Include="..\NikiAI.Scheduler\NikiAI.Scheduler.csproj" />
+    <ProjectReference Include="..\NikiAI.Notifications\NikiAI.Notifications.csproj" />
+    <ProjectReference Include="..\NikiAI.Character\NikiAI.Character.csproj" />
+    <ProjectReference Include="..\NikiAI.Widgets\NikiAI.Widgets.csproj" />
+    <ProjectReference Include="..\NikiAI.Storage\NikiAI.Storage.csproj" />
+    <ProjectReference Include="..\NikiAI.Voice\NikiAI.Voice.csproj" />
+    <ProjectReference Include="..\NikiAI.Workflows\NikiAI.Workflows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="System.Speech" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Content Include="Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

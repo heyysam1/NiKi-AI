@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "rmsaXUd/bA0=",
+  "success": true,
+  "projectFilePath": "D:\\2! Admin - Productivity\\Antigravity Projects\\NiKi AI\\src\\NikiAI.Scheduler\\NikiAI.Scheduler.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\samiu\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\samiu\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.0\\microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,15 @@
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\bin\Debug\net8.0\NikiAI.Security.deps.json
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\bin\Debug\net8.0\NikiAI.Security.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\bin\Debug\net8.0\NikiAI.Security.pdb
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\bin\Debug\net8.0\NikiAI.Core.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\bin\Debug\net8.0\NikiAI.Core.pdb
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.Security.csproj.AssemblyReference.cache
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.Security.GeneratedMSBuildEditorConfig.editorconfig
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.Security.AssemblyInfoInputs.cache
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.Security.AssemblyInfo.cs
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.Security.csproj.CoreCompileInputs.cache
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.S.4E9D25AE.Up2Date
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.Security.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\refint\NikiAI.Security.dll
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\NikiAI.Security.pdb
+D:\2! Admin - Productivity\Antigravity Projects\NiKi AI\src\NikiAI.Security\obj\Debug\net8.0\ref\NikiAI.Security.dll

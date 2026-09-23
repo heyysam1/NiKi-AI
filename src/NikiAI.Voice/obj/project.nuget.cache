@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "pBY2c+O8keM=",
+  "success": true,
+  "projectFilePath": "D:\\2! Admin - Productivity\\Antigravity Projects\\NiKi AI\\src\\NikiAI.Voice\\NikiAI.Voice.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\samiu\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\samiu\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.0\\microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\samiu\\.nuget\\packages\\system.security.cryptography.protecteddata\\8.0.0\\system.security.cryptography.protecteddata.8.0.0.nupkg.sha512",
+    "C:\\Users\\samiu\\.nuget\\packages\\system.speech\\8.0.0\\system.speech.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

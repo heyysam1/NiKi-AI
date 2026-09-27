@@ -4,9 +4,9 @@ using NikiAI.Core.Browser;
 namespace NikiAI.Browser;
 
 /// <summary>
-/// High-level browser automation engine orchestrating Edge and Brave automation.
+/// High-level browser automation engine orchestrating browser automation.
 /// Implements search, page reading, and structured field extraction.
-/// Strictly enforces Chrome prohibition and treats all external webpage content as untrusted data.
+/// Treats all external webpage content as untrusted data.
 /// </summary>
 public class BrowserAutomationEngine : IBrowserAutomationEngine
 {
@@ -386,13 +386,12 @@ public class BrowserAutomationEngine : IBrowserAutomationEngine
             throw new ArgumentException("URL cannot be empty or whitespace.", nameof(url));
         }
 
-        BrowserGuardrail.AssertNotChrome(url);
-
         if (url.StartsWith("chrome://", StringComparison.OrdinalIgnoreCase) ||
             url.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase) ||
-            url.Contains("chrome", StringComparison.OrdinalIgnoreCase))
+            url.StartsWith("edge://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("brave://", StringComparison.OrdinalIgnoreCase))
         {
-            throw new BlockedNavigationException($"Navigation to Chrome-related URL ('{url}') is prohibited.");
+            throw new BlockedNavigationException($"Navigation to internal browser URL ('{url}') is prohibited.");
         }
 
         if (url.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||

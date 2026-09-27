@@ -7,7 +7,6 @@ namespace NikiAI.Tools;
 
 /// <summary>
 /// Agent tool for searching the web via browser automation.
-/// Strictly uses Microsoft Edge or Brave; Google Chrome is prohibited.
 /// Output is marked as untrusted external data.
 /// </summary>
 public class BrowserSearchTool : ITool
@@ -16,7 +15,7 @@ public class BrowserSearchTool : ITool
 
     public string Id => ToolId;
     public string Name => "Browser Search";
-    public string Description => "Performs a web search using Microsoft Edge or Brave browser automation. Returns structured search results. Chrome is prohibited.";
+    public string Description => "Performs a web search using browser automation. Returns structured search results.";
     public ToolRiskLevel RiskLevel => ToolRiskLevel.Informational;
     public TimeSpan DefaultTimeout => TimeSpan.FromSeconds(25);
 
@@ -54,16 +53,6 @@ public class BrowserSearchTool : ITool
                 return ToolResult.Failure(call.CallId, Id, "Search query cannot be empty.", stopwatch.Elapsed);
             }
 
-            if (query.Contains("chrome", StringComparison.OrdinalIgnoreCase))
-            {
-                stopwatch.Stop();
-                return ToolResult.Failure(
-                    call.CallId,
-                    Id,
-                    "Policy Violation: Google Chrome operations are prohibited. Niki AI uses Microsoft Edge or Brave.",
-                    stopwatch.Elapsed);
-            }
-
             int maxResults = 5;
             if (root.TryGetProperty("max_results", out var maxElem) && maxElem.TryGetInt32(out var customMax))
             {
@@ -93,11 +82,6 @@ public class BrowserSearchTool : ITool
         {
             stopwatch.Stop();
             return ToolResult.Failure(call.CallId, Id, "Search was cancelled.", stopwatch.Elapsed);
-        }
-        catch (ChromeProhibitedException ex)
-        {
-            stopwatch.Stop();
-            return ToolResult.Failure(call.CallId, Id, ex.Message, stopwatch.Elapsed);
         }
         catch (BrowserUnavailableException ex)
         {

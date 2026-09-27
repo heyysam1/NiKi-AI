@@ -2,7 +2,7 @@ namespace NikiAI.Core.Browser;
 
 /// <summary>
 /// Supported browsers for Niki AI automation and web tasks.
-/// Google Chrome is strictly prohibited per project specifications.
+/// Resolved dynamically via capability-based adapters.
 /// </summary>
 public enum SupportedBrowser
 {
@@ -10,23 +10,6 @@ public enum SupportedBrowser
     Brave,
     Chrome,
     Custom
-}
-
-/// <summary>
-/// Exception thrown whenever an attempt is made to request, select, launch, or configure Google Chrome.
-/// Google Chrome is not installed on the target system and is strictly prohibited.
-/// </summary>
-public class ChromeProhibitedException : InvalidOperationException
-{
-    public ChromeProhibitedException() 
-        : base("Google Chrome is strictly prohibited. Niki AI only supports Microsoft Edge or Brave.")
-    {
-    }
-
-    public ChromeProhibitedException(string message) 
-        : base(message)
-    {
-    }
 }
 
 /// <summary>
@@ -74,7 +57,7 @@ public interface IBrowserSearchProvider
 }
 
 /// <summary>
-/// High-level browser automation engine orchestrating Edge/Brave automation,
+/// High-level browser automation engine orchestrating browser automation,
 /// navigation, reading, search, and structured extraction.
 /// </summary>
 public interface IBrowserAutomationEngine : IAsyncDisposable
@@ -90,35 +73,36 @@ public interface IBrowserAutomationEngine : IAsyncDisposable
 /// </summary>
 public static class BrowserGuardrail
 {
-    public static void AssertNotChrome(string? browserNameOrPath)
-    {
-        if (string.IsNullOrWhiteSpace(browserNameOrPath))
-        {
-            return;
-        }
-
-        if (browserNameOrPath.Contains("chrome", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ChromeProhibitedException(
-                $"Google Chrome is strictly prohibited. Access to ('{browserNameOrPath}') was blocked. Only Microsoft Edge and Brave are supported.");
-        }
-    }
-
     public static SupportedBrowser ParseAndValidate(string browserName)
     {
-        AssertNotChrome(browserName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(browserName);
 
-        if (string.Equals(browserName, "edge", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(browserName, "msedge", StringComparison.OrdinalIgnoreCase))
+        var trimmed = browserName.Trim();
+
+        if (string.Equals(trimmed, "edge", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "msedge", StringComparison.OrdinalIgnoreCase))
         {
             return SupportedBrowser.Edge;
         }
 
-        if (string.Equals(browserName, "brave", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(trimmed, "brave", StringComparison.OrdinalIgnoreCase))
         {
             return SupportedBrowser.Brave;
         }
 
-        throw new ArgumentException($"Unsupported browser: '{browserName}'. Supported browsers are Edge and Brave.", nameof(browserName));
+        if (string.Equals(trimmed, "chrome", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "googlechrome", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "google-chrome", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(trimmed, "google chrome", StringComparison.OrdinalIgnoreCase))
+        {
+            return SupportedBrowser.Chrome;
+        }
+
+        if (string.Equals(trimmed, "custom", StringComparison.OrdinalIgnoreCase))
+        {
+            return SupportedBrowser.Custom;
+        }
+
+        throw new ArgumentException($"Unsupported or unrecognized browser: '{browserName}'.", nameof(browserName));
     }
 }

@@ -47,26 +47,45 @@ public class OpenAppToolTests
     }
 
     [Theory]
-    [InlineData("chrome")]
-    [InlineData("Google Chrome")]
-    [InlineData("chrome.exe")]
-    public async Task ExecuteAsync_Chrome_StrictlyProhibited(string chromeName)
+    [InlineData("cmd")]
+    [InlineData("cmd.exe")]
+    [InlineData("powershell")]
+    [InlineData("powershell.exe")]
+    [InlineData("pwsh")]
+    [InlineData("bash")]
+    public async Task ExecuteAsync_CommandShells_StrictlyProhibited(string shellName)
     {
         var tool = new OpenAppTool(_registry, _launcher);
-        var call = new ToolCall("c2", "open_app", $$"""{ "app_name": "{{chromeName}}" }""", DateTimeOffset.UtcNow);
+        var call = new ToolCall("c2", "open_app", $$"""{ "app_name": "{{shellName}}" }""", DateTimeOffset.UtcNow);
 
         var result = await tool.ExecuteAsync(call);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("Policy Violation: Google Chrome is prohibited on this system", result.ErrorMessage);
+        Assert.Contains("restricted command shell", result.ErrorMessage);
         Assert.Null(_launcher.LastLaunchedApp); // Must never touch launcher!
+    }
+
+    [Theory]
+    [InlineData("chrome")]
+    [InlineData("Google Chrome")]
+    [InlineData("chrome.exe")]
+    public async Task ExecuteAsync_Chrome_NotInControlledAppCatalog(string chromeName)
+    {
+        var tool = new OpenAppTool(_registry, _launcher);
+        var call = new ToolCall("c2b", "open_app", $$"""{ "app_name": "{{chromeName}}" }""", DateTimeOffset.UtcNow);
+
+        var result = await tool.ExecuteAsync(call);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not in the controlled approved application catalog", result.ErrorMessage);
+        Assert.Null(_launcher.LastLaunchedApp);
     }
 
     [Fact]
     public async Task ExecuteAsync_ArbitraryExecutable_RejectedWithoutLaunch()
     {
         var tool = new OpenAppTool(_registry, _launcher);
-        var call = new ToolCall("c3", "open_app", """{ "app_name": "cmd.exe" }""", DateTimeOffset.UtcNow);
+        var call = new ToolCall("c3", "open_app", """{ "app_name": "unknown_app.exe" }""", DateTimeOffset.UtcNow);
 
         var result = await tool.ExecuteAsync(call);
 

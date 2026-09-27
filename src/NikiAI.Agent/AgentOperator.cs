@@ -17,7 +17,7 @@ namespace NikiAI.Agent;
 /// </summary>
 public class AgentOperator : IAgentOperator
 {
-    private const int DefaultMaxTurns = 10;
+    public const int DefaultMaxTurns = 8;
     private readonly IAgentProvider _agentProvider;
     private readonly IToolCatalog _toolCatalog;
     private readonly IToolExecutor _toolExecutor;
@@ -135,6 +135,7 @@ public class AgentOperator : IAgentOperator
         messages.Add(AgentMessage.User(request.UserPrompt));
 
         var executedToolCalls = new List<AgentToolCall>();
+        var toolResults = new List<AgentToolResult>();
         var toolDefinitions = _toolCatalog.GetToolDefinitions();
 
         // 3. Multi-Turn Operator Loop
@@ -212,6 +213,8 @@ public class AgentOperator : IAgentOperator
                         toolResult = new AgentToolResult(toolCall.CallId, toolCall.ToolName, false, $"Internal tool execution error: {ex.Message}", ex.Message);
                     }
 
+                    toolResults.Add(toolResult);
+
                     // Feed tool result back into conversation for subsequent LLM turn
                     messages.Add(AgentMessage.Tool(toolCall.CallId, toolCall.ToolName, toolResult.ContentJson));
 
@@ -234,22 +237,96 @@ public class AgentOperator : IAgentOperator
             // Case B: Final Text Response (No tool calls)
             string finalText = completionResponse.Content ?? string.Empty;
 
+            bool hasUnresolvedToolFailure = false;
+            if (toolResults.Count > 0)
+            {
+                // Check if any tool failed and was not followed by a successful execution of that tool
+                for (int i = 0; i < toolResults.Count; i++)
+                {
+                    if (!toolResults[i].IsSuccess)
+                    {
+                        string failedToolName = toolResults[i].ToolName;
+                        bool subsequentlySucceeded = false;
+                        for (int j = i + 1; j < toolResults.Count; j++)
+                        {
+                            if (string.Equals(toolResults[j].ToolName, failedToolName, StringComparison.OrdinalIgnoreCase) && toolResults[j].IsSuccess)
+                            {
+                                subsequentlySucceeded = true;
+                                break;
+                            }
+                        }
+
+                        if (!subsequentlySucceeded)
+                        {
+                            hasUnresolvedToolFailure = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(currentTaskId) && _taskRepository != null)
             {
                 // Refresh task state to verify it is not in Waiting (e.g. background job still active)
                 var latestTask = await _taskRepository.GetByIdAsync(currentTaskId, cancellationToken);
-                if (latestTask != null && latestTask.Status == AgentTaskStatus.Running)
+                if (latestTask != null)
                 {
                     latestTask.ResultSummary = finalText;
-                    await _taskRepository.UpdateAsync(latestTask, cancellationToken);
-                    await _taskRepository.TransitionStatusAsync(currentTaskId, AgentTaskStatus.Completed, "Task completed successfully.", cancellationToken);
+
+                    if (latestTask.Status == AgentTaskStatus.Running)
+                    {
+                        if (hasUnresolvedToolFailure)
+                        {
+                            await _taskRepository.UpdateAsync(latestTask, cancellationToken);
+                            await _taskRepository.TransitionStatusAsync(currentTaskId, AgentTaskStatus.Failed, "Task failed due to unresolved tool execution error.", cancellationToken);
+                            return new AgentOperatorResponse(
+                                ResponseText: finalText,
+                                TaskId: currentTaskId,
+                                IsSuccess: false,
+                                IsCompleted: false,
+                                ExecutedToolCalls: executedToolCalls,
+                                ErrorMessage: "Task execution contained unresolved tool failures.");
+                        }
+                        else
+                        {
+                            await _taskRepository.UpdateAsync(latestTask, cancellationToken);
+                            await _taskRepository.TransitionStatusAsync(currentTaskId, AgentTaskStatus.Completed, "Task completed successfully.", cancellationToken);
+                            return new AgentOperatorResponse(
+                                ResponseText: finalText,
+                                TaskId: currentTaskId,
+                                IsSuccess: true,
+                                IsCompleted: true,
+                                ExecutedToolCalls: executedToolCalls);
+                        }
+                    }
+                    else if (latestTask.Status == AgentTaskStatus.Waiting || latestTask.Status == AgentTaskStatus.NeedsApproval)
+                    {
+                        await _taskRepository.UpdateAsync(latestTask, cancellationToken);
+                        return new AgentOperatorResponse(
+                            ResponseText: finalText,
+                            TaskId: currentTaskId,
+                            IsSuccess: true,
+                            IsCompleted: false,
+                            ExecutedToolCalls: executedToolCalls);
+                    }
+                    else if (latestTask.Status == AgentTaskStatus.Failed || latestTask.Status == AgentTaskStatus.Cancelled)
+                    {
+                        await _taskRepository.UpdateAsync(latestTask, cancellationToken);
+                        return new AgentOperatorResponse(
+                            ResponseText: finalText,
+                            TaskId: currentTaskId,
+                            IsSuccess: false,
+                            IsCompleted: false,
+                            ExecutedToolCalls: executedToolCalls,
+                            ErrorMessage: latestTask.Status == AgentTaskStatus.Cancelled ? "Operation cancelled." : "Task execution failed.");
+                    }
                 }
             }
 
             return new AgentOperatorResponse(
                 ResponseText: finalText,
                 TaskId: currentTaskId,
-                IsSuccess: true,
+                IsSuccess: !hasUnresolvedToolFailure,
                 IsCompleted: true,
                 ExecutedToolCalls: executedToolCalls);
         }

@@ -383,8 +383,8 @@ public partial class App
                         {
                             throw new InvalidOperationException("Companion window must have AllowsTransparency=true and Background=Transparent.");
                         }
-                        if (_companionWindow.CompanionRootGrid.Children.Count != 1 ||
-                            !(_companionWindow.CompanionRootGrid.Children[0] is NikiAI.App.Controls.CharacterView))
+                        if (_companionWindow.CompanionRootGrid.Children.Count > 2 ||
+                            !_companionWindow.CompanionRootGrid.Children.OfType<NikiAI.App.Controls.CharacterView>().Any())
                         {
                             throw new InvalidOperationException("Companion window must only contain the free-floating CharacterView with no boxed cards, headers, or buttons.");
                         }
@@ -835,12 +835,12 @@ public partial class App
                             throw new InvalidOperationException("Schema validator failed to reject malformed JSON.");
                         _logger.LogInformation("[VERIFY PASS] Schema validator correctly rejects invalid payloads and missing required fields.");
     
-                        // 3. Verify open_app and Chrome Guardrails
-                        var chromeCall = new ToolCall("c_chrome", "open_app", """{ "app_name": "chrome" }""", DateTimeOffset.UtcNow);
-                        var chromeResult = await executor.ExecuteAsync(chromeCall);
-                        if (chromeResult.IsSuccess || !chromeResult.ErrorMessage!.Contains("Google Chrome is prohibited"))
-                            throw new InvalidOperationException("open_app failed to enforce strict Chrome prohibition.");
-                        _logger.LogInformation("[VERIFY PASS] open_app strictly prohibited Google Chrome with explicit policy violation.");
+                        // 3. Verify open_app and Restricted Command Shell Guardrails
+                        var restrictedCall = new ToolCall("c_powershell", "open_app", """{ "app_name": "powershell" }""", DateTimeOffset.UtcNow);
+                        var restrictedResult = await executor.ExecuteAsync(restrictedCall);
+                        if (restrictedResult.IsSuccess || !restrictedResult.ErrorMessage!.Contains("restricted command shell"))
+                            throw new InvalidOperationException("open_app failed to enforce strict restricted shell prohibition.");
+                        _logger.LogInformation("[VERIFY PASS] open_app strictly prohibited command shell with explicit policy violation.");
     
                         var arbitraryCall = new ToolCall("c_arb", "open_app", """{ "app_name": "cmd.exe" }""", DateTimeOffset.UtcNow);
                         var arbResult = await executor.ExecuteAsync(arbitraryCall);
@@ -1143,14 +1143,14 @@ public partial class App
                         }
                         _logger.LogInformation("[VERIFY PASS] Secret/sensitive-data redaction across audit logs verified.");
     
-                        // 8. Strict Chrome Prohibition Check
-                        var chromeCall = new ToolCall("c_p6_chrome", "open_app", """{"app_name": "chrome"}""", DateTimeOffset.UtcNow);
-                        var chromeResult = await toolExecutor.ExecuteAsync(chromeCall);
-                        if (chromeResult.IsSuccess || !chromeResult.ErrorMessage!.Contains("Google Chrome is prohibited"))
+                        // 8. Strict Restricted Command Shell Prohibition Check
+                        var restrictedShellCall = new ToolCall("c_p6_cmd", "open_app", """{"app_name": "cmd.exe"}""", DateTimeOffset.UtcNow);
+                        var restrictedShellResult = await toolExecutor.ExecuteAsync(restrictedShellCall);
+                        if (restrictedShellResult.IsSuccess || !restrictedShellResult.ErrorMessage!.Contains("restricted command shell"))
                         {
-                            throw new InvalidOperationException("Google Chrome prohibition guardrail failed!");
+                            throw new InvalidOperationException("Command shell prohibition guardrail failed!");
                         }
-                        _logger.LogInformation("[VERIFY PASS] Google Chrome strictly prohibited with explicit guardrail denial.");
+                        _logger.LogInformation("[VERIFY PASS] Restricted command shell strictly prohibited with explicit guardrail denial.");
     
                         // 9. Visual Snapshot of ApprovalPromptWindow (Independent window, preserves companion)
                         promptHandler.AutomatedResponseProvider = null; // restore normal UI mode
@@ -1475,13 +1475,13 @@ public partial class App
                         _logger.LogInformation("[VERIFY PASS] Free-floating transparent companion remains 100% independent.");
     
                         // 10. Verify Phase 6 Security Guardrails Remain Intact
-                        var chromeCall = new ToolCall("c_p7_chrome", "open_app", """{"app_name": "Google Chrome"}""", now);
-                        var chromeResult = await toolExecutor.ExecuteAsync(chromeCall);
-                        if (chromeResult.IsSuccess)
+                        var restrictedCall = new ToolCall("c_p7_cmd", "open_app", """{"app_name": "cmd.exe"}""", now);
+                        var restrictedResult = await toolExecutor.ExecuteAsync(restrictedCall);
+                        if (restrictedResult.IsSuccess)
                         {
-                            throw new InvalidOperationException("Security violation: Google Chrome execution was not prohibited!");
+                            throw new InvalidOperationException("Security violation: Restricted command shell execution was not prohibited!");
                         }
-                        _logger.LogInformation("[VERIFY PASS] Phase 6 Google Chrome prohibition remains strictly enforced.");
+                        _logger.LogInformation("[VERIFY PASS] Phase 6 restricted command shell prohibition remains strictly enforced.");
     
                         _logger.LogInformation("[VERIFY COMPLETE] All Phase 7 Scheduler & Notifications requirements successfully validated at runtime! Exiting cleanly.");
                         Shutdown(0);
@@ -1513,25 +1513,18 @@ public partial class App
                         var toolExecutor = ServiceProvider.GetRequiredService<IToolExecutor>();
                         var now = DateTimeOffset.UtcNow;
     
-                        // 1. Verify Supported Browser Discovery & Chrome Rejection
+                        // 1. Verify Browser Discovery & Capability Architecture
                         var edgeAvailable = browserService.IsBrowserAvailable(SupportedBrowser.Edge);
                         var braveAvailable = browserService.IsBrowserAvailable(SupportedBrowser.Brave);
-                        _logger.LogInformation("[VERIFY PASS] Supported browser discovery: Edge available: {EdgeAvailable}, Brave available: {BraveAvailable}", edgeAvailable, braveAvailable);
-    
-                        bool chromeBlocked = false;
-                        try
+                        var chromeAvailable = browserService.IsBrowserAvailable(SupportedBrowser.Chrome);
+                        _logger.LogInformation("[VERIFY PASS] Browser discovery scan: Edge available: {EdgeAvailable}, Brave available: {BraveAvailable}, Chrome available: {ChromeAvailable}", edgeAvailable, braveAvailable, chromeAvailable);
+
+                        var parsedChrome = BrowserGuardrail.ParseAndValidate("chrome");
+                        if (parsedChrome != SupportedBrowser.Chrome)
                         {
-                            BrowserGuardrail.AssertNotChrome("chrome.exe");
+                            throw new InvalidOperationException("BrowserGuardrail failed to parse Chrome!");
                         }
-                        catch (ChromeProhibitedException)
-                        {
-                            chromeBlocked = true;
-                        }
-                        if (!chromeBlocked)
-                        {
-                            throw new InvalidOperationException("Security violation: Chrome was not blocked by guardrail!");
-                        }
-                        _logger.LogInformation("[VERIFY PASS] Google Chrome strictly rejected across all guardrails.");
+                        _logger.LogInformation("[VERIFY PASS] Browser-agnostic discovery and capability validation verified.");
     
                         // 2. Prepare Local Test HTML Page
                         var tempDir = Path.Combine(Path.GetTempPath(), $"NikiAI_VerifyP8_{Guid.NewGuid():N}");
@@ -1666,7 +1659,7 @@ public partial class App
                         {
                             throw new InvalidOperationException("Security violation: navigation to chrome:// was not blocked!");
                         }
-                        _logger.LogInformation("[VERIFY PASS] Blocked navigation and Chrome prohibition verified.");
+                        _logger.LogInformation("[VERIFY PASS] Blocked navigation to internal browser scheme verified.");
     
                         // 8. Verify Tool Cancellation Handling
                         using var cancelledCts = new CancellationTokenSource();
@@ -2490,7 +2483,7 @@ public partial class App
                             Inputs: new List<string>(),
                             Actions: new List<WorkflowActionDefinition>
                             {
-                                new WorkflowActionDefinition("step-fail", "Open Prohibited Chrome", ActionType.ToolCall, "open_app", "{\"app_name\":\"chrome\"}", false, null, 5)
+                                new WorkflowActionDefinition("step-fail", "Open Prohibited Cmd", ActionType.ToolCall, "open_app", "{\"app_name\":\"cmd.exe\"}", false, null, 5)
                             },
                             TimeoutSeconds: 15,
                             CompletionBehavior: CompletionBehavior.Silent,

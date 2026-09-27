@@ -6,20 +6,24 @@ namespace NikiAI.Tools;
 /// <summary>
 /// Controlled registry for approved desktop applications.
 /// Enforces strict application allowlisting, eliminates arbitrary executable execution,
-/// and strictly blocks Google Chrome.
+/// and strictly blocks restricted command shells (e.g. cmd.exe, powershell.exe).
 /// </summary>
 public class ApprovedAppRegistry : IApprovedAppRegistry
 {
-    public const string ChromeProhibitionReason = "Policy Violation: Google Chrome is prohibited on this system. Use Microsoft Edge or Brave instead.";
-
-    private static readonly HashSet<string> ChromeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> ProhibitedIdentifiers = new(StringComparer.OrdinalIgnoreCase)
     {
-        "chrome",
-        "google chrome",
-        "google-chrome",
-        "google_chrome",
-        "chrome.exe",
-        "googlechrome"
+        "cmd",
+        "cmd.exe",
+        "powershell",
+        "powershell.exe",
+        "pwsh",
+        "pwsh.exe",
+        "bash",
+        "bash.exe",
+        "wscript",
+        "wscript.exe",
+        "cscript",
+        "cscript.exe"
     };
 
     private static readonly char[] ForbiddenPathChars = ['\\', '/', ':', ';', '&', '|', '>', '<', '`', '$', '%'];
@@ -71,11 +75,9 @@ public class ApprovedAppRegistry : IApprovedAppRegistry
 
         var normalized = appNameOrKey.Trim();
 
-        // Check explicit Chrome identifiers
-        if (ChromeIdentifiers.Contains(normalized) ||
-            normalized.Contains("chrome", StringComparison.OrdinalIgnoreCase))
+        if (ProhibitedIdentifiers.Contains(normalized))
         {
-            reason = ChromeProhibitionReason;
+            reason = $"Policy Violation: Executable '{normalized}' is a restricted command shell and cannot be launched directly.";
             return true;
         }
 

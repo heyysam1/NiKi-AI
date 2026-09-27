@@ -14,7 +14,7 @@ public class SearchWebTool : ITool
 
     public string Id => ToolId;
     public string Name => "Search Web";
-    public string Description => "Performs a web search for public information and references. Uses Edge/Brave compatible services; Chrome is prohibited.";
+    public string Description => "Performs a web search for public information and references.";
     public ToolRiskLevel RiskLevel => ToolRiskLevel.Informational;
     public TimeSpan DefaultTimeout => TimeSpan.FromSeconds(10);
 
@@ -50,19 +50,6 @@ public class SearchWebTool : ITool
             {
                 stopwatch.Stop();
                 return ToolResult.Failure(call.CallId, Id, "Search query cannot be empty.", stopwatch.Elapsed);
-            }
-
-            // Check if query targets Google Chrome automation or installation
-            if (query.Contains("install chrome", StringComparison.OrdinalIgnoreCase) ||
-                query.Contains("download chrome", StringComparison.OrdinalIgnoreCase) ||
-                query.Contains("automate chrome", StringComparison.OrdinalIgnoreCase))
-            {
-                stopwatch.Stop();
-                return ToolResult.Failure(
-                    call.CallId,
-                    Id,
-                    "Policy Violation: Google Chrome operations are prohibited. Use Microsoft Edge or Brave.",
-                    stopwatch.Elapsed);
             }
 
             int maxResults = 5;

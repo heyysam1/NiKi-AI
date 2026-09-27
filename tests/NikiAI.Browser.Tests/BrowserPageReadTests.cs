@@ -89,11 +89,25 @@ public class BrowserPageReadTests : IAsyncDisposable
     [InlineData("chrome://settings")]
     [InlineData("chrome://flags")]
     [InlineData("chrome-extension://xyz/options.html")]
-    public async Task ReadPageAsync_ChromeTargets_ThrowsChromeProhibitedException(string chromeUrl)
+    [InlineData("edge://settings")]
+    [InlineData("brave://settings")]
+    public async Task ReadPageAsync_InternalSchemes_ThrowsBlockedNavigationException(string internalUrl)
     {
         await using var engine = BrowserAutomationEngine.Create(_browserService, SupportedBrowser.Edge);
 
-        await Assert.ThrowsAsync<ChromeProhibitedException>(() => engine.ReadPageAsync(chromeUrl));
+        await Assert.ThrowsAsync<BlockedNavigationException>(() => engine.ReadPageAsync(internalUrl));
+    }
+
+    [Fact]
+    public async Task ReadPageAsync_PublicUrlContainingChrome_DoesNotThrowBlockedNavigationException()
+    {
+        // Public website URLs containing "chrome" must not be blocked by guardrail
+        var publicChromeHtml = CreateTestHtml("<h1>Google Chrome Info</h1><p>Public info page</p>");
+        await using var engine = BrowserAutomationEngine.Create(_browserService, SupportedBrowser.Edge);
+
+        var content = await engine.ReadPageAsync(publicChromeHtml);
+        Assert.NotNull(content);
+        Assert.Contains("Google Chrome Info", content.TextContent);
     }
 
     [Fact]

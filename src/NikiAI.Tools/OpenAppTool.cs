@@ -6,7 +6,7 @@ namespace NikiAI.Tools;
 
 /// <summary>
 /// Tool for launching controlled, approved applications.
-/// Resolves through IApprovedAppRegistry; strictly prohibits Chrome and arbitrary executable paths.
+/// Resolves through IApprovedAppRegistry; eliminates arbitrary executable execution and restricted command shells.
 /// </summary>
 public class OpenAppTool : ITool
 {
@@ -54,7 +54,7 @@ public class OpenAppTool : ITool
                 arguments = argElem.GetString()?.Trim();
             }
 
-            // Chrome prohibition check
+            // Restricted executable / shell check
             if (_appRegistry.IsProhibitedApp(appName, out var prohibitionReason))
             {
                 stopwatch.Stop();

@@ -362,4 +362,175 @@ public class AgentOperatorTests
         Assert.NotNull(task);
         Assert.Equal(AgentTaskStatus.Completed, task!.Status);
     }
+
+    [Fact]
+    public void AgentOperator_DefaultMaxTurns_IsEight()
+    {
+        var provider = new MockAgentProvider();
+        var registry = new ToolRegistry();
+        var catalog = new ToolCatalog(registry);
+        var permEngine = new AutoAllowPermissionEngine();
+        var executor = new ToolExecutor(registry, permEngine, new TestAuditLogger());
+        var taskRepo = new InMemoryTaskRepository();
+
+        var op = new AgentOperator(provider, catalog, executor, taskRepo);
+
+        Assert.Equal(8, op.MaxTurns);
+        Assert.Equal(8, AgentOperator.DefaultMaxTurns);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EightTurnExhaustion_TransitionsTaskToFailedNeverCompleted()
+    {
+        var provider = new MockAgentProvider { SimulatedLatencyMs = 0 };
+        var registry = new ToolRegistry();
+        registry.RegisterTool(new TestWeatherTool());
+
+        var catalog = new ToolCatalog(registry);
+        var permEngine = new AutoAllowPermissionEngine();
+        var executor = new ToolExecutor(registry, permEngine, new TestAuditLogger());
+        var taskRepo = new InMemoryTaskRepository();
+
+        int callCount = 0;
+        provider.CustomResponseHandler = req =>
+        {
+            callCount++;
+            return new ChatCompletionResponse(
+                Content: string.Empty,
+                ToolCalls: new[] { new AgentToolCall($"call_{callCount}", "get_weather", """{"city": "LoopCity"}""") }
+            );
+        };
+
+        var op = new AgentOperator(provider, catalog, executor, taskRepo);
+
+        var response = await op.ExecuteAsync(new AgentOperatorRequest("Infinite tool loop", ForceDurableTracking: true));
+
+        Assert.False(response.IsSuccess);
+        Assert.False(response.IsCompleted);
+        Assert.Contains("Maximum execution turns (8) reached", response.ErrorMessage);
+        Assert.Equal(8, callCount);
+
+        var task = await taskRepo.GetByIdAsync(response.TaskId!);
+        Assert.NotNull(task);
+        Assert.Equal(AgentTaskStatus.Failed, task!.Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnrecoveredToolFailure_TransitionsToFailedNeverCompleted()
+    {
+        var provider = new MockAgentProvider { SimulatedLatencyMs = 0 };
+        var registry = new ToolRegistry();
+        registry.RegisterTool(new TestWeatherTool());
+
+        var catalog = new ToolCatalog(registry);
+        var permEngine = new AutoAllowPermissionEngine();
+        var executor = new ToolExecutor(registry, permEngine, new TestAuditLogger());
+        var taskRepo = new InMemoryTaskRepository();
+
+        int turnCount = 0;
+        provider.CustomResponseHandler = req =>
+        {
+            turnCount++;
+            if (turnCount == 1)
+            {
+                // Turn 1: LLM returns invalid arguments -> tool failure
+                return new ChatCompletionResponse(
+                    Content: string.Empty,
+                    ToolCalls: new[] { new AgentToolCall("call_err", "get_weather", """{"invalid_field": 123}""") }
+                );
+            }
+            else
+            {
+                // Turn 2: LLM produces text instead of correcting the tool call
+                return new ChatCompletionResponse(
+                    Content: "Sorry, I couldn't get the weather."
+                );
+            }
+        };
+
+        var op = new AgentOperator(provider, catalog, executor, taskRepo);
+        var response = await op.ExecuteAsync(new AgentOperatorRequest("Weather please", ForceDurableTracking: true));
+
+        // The durable task must NOT be marked Completed when there was an unrecovered tool failure!
+        Assert.False(response.IsSuccess);
+        Assert.False(response.IsCompleted);
+        Assert.NotNull(response.TaskId);
+        Assert.Contains("unresolved tool failure", response.ErrorMessage ?? "");
+
+        var task = await taskRepo.GetByIdAsync(response.TaskId!);
+        Assert.NotNull(task);
+        Assert.Equal(AgentTaskStatus.Failed, task!.Status);
+    }
+
+    private class TestStatusTransitionTool : ITool
+    {
+        private readonly InMemoryTaskRepository _taskRepo;
+        private readonly AgentTaskStatus _targetStatus;
+
+        public TestStatusTransitionTool(InMemoryTaskRepository taskRepo, AgentTaskStatus targetStatus)
+        {
+            _taskRepo = taskRepo;
+            _targetStatus = targetStatus;
+        }
+
+        public string Id => "pause_task";
+        public string Name => "Pause Task";
+        public string Description => "Transitions task to target status";
+        public ToolRiskLevel RiskLevel => ToolRiskLevel.Sensitive;
+        public string InputSchemaJson => """{"type": "object", "properties": {}}""";
+        public TimeSpan DefaultTimeout => TimeSpan.FromSeconds(5);
+
+        public async Task<ToolResult> ExecuteAsync(ToolCall call, CancellationToken cancellationToken = default)
+        {
+            var all = await _taskRepo.GetAllAsync(cancellationToken: cancellationToken);
+            var running = all.FirstOrDefault(t => t.Status == AgentTaskStatus.Running);
+            if (running is not null)
+            {
+                await _taskRepo.TransitionStatusAsync(running.Id, _targetStatus, "Paused by tool", cancellationToken);
+            }
+            return ToolResult.Success(call.CallId, Id, """{"status": "paused"}""", TimeSpan.FromMilliseconds(5));
+        }
+    }
+
+    [Theory]
+    [InlineData(AgentTaskStatus.Waiting)]
+    [InlineData(AgentTaskStatus.NeedsApproval)]
+    public async Task ExecuteAsync_TaskInWaitingOrNeedsApproval_ReturnsIsCompletedFalse(AgentTaskStatus waitingStatus)
+    {
+        var provider = new MockAgentProvider { SimulatedLatencyMs = 0 };
+        var registry = new ToolRegistry();
+        var taskRepo = new InMemoryTaskRepository();
+        registry.RegisterTool(new TestStatusTransitionTool(taskRepo, waitingStatus));
+
+        var catalog = new ToolCatalog(registry);
+        var permEngine = new AutoAllowPermissionEngine();
+        var executor = new ToolExecutor(registry, permEngine, new TestAuditLogger());
+
+        int turnCount = 0;
+        provider.CustomResponseHandler = req =>
+        {
+            turnCount++;
+            if (turnCount == 1)
+            {
+                return new ChatCompletionResponse(
+                    Content: string.Empty,
+                    ToolCalls: new[] { new AgentToolCall("call_pause", "pause_task", "{}") }
+                );
+            }
+            else
+            {
+                return new ChatCompletionResponse(Content: "Awaiting your action.");
+            }
+        };
+
+        var op = new AgentOperator(provider, catalog, executor, taskRepo);
+        var response = await op.ExecuteAsync(new AgentOperatorRequest("Start pause flow", ForceDurableTracking: true));
+
+        Assert.False(response.IsCompleted);
+        Assert.NotNull(response.TaskId);
+
+        var task = await taskRepo.GetByIdAsync(response.TaskId!);
+        Assert.NotNull(task);
+        Assert.Equal(waitingStatus, task!.Status);
+    }
 }

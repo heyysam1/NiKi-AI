@@ -7,8 +7,7 @@ using NikiAI.Core.Browser;
 namespace NikiAI.Browser;
 
 /// <summary>
-/// Manages launching, port binding, health checking, and isolated lifecycle of Microsoft Edge or Brave processes.
-/// Google Chrome is strictly prohibited and guarded at all entry points.
+/// Manages launching, port binding, health checking, and isolated lifecycle of browser processes.
 /// </summary>
 public class BrowserProcessManager : IAsyncDisposable
 {
@@ -40,11 +39,10 @@ public class BrowserProcessManager : IAsyncDisposable
         if (!_browserService.IsBrowserAvailable(BrowserType))
         {
             throw new BrowserUnavailableException(
-                $"Configured browser '{BrowserType}' is not available on this system. Supported browsers are Microsoft Edge and Brave.");
+                $"Configured browser '{BrowserType}' is not available on this system.");
         }
 
         var executablePath = await _browserService.GetBrowserExecutablePathAsync(BrowserType, cancellationToken);
-        BrowserGuardrail.AssertNotChrome(executablePath);
 
         _debuggingPort = GetAvailablePort();
         _tempProfilePath = Path.Combine(Path.GetTempPath(), $"NikiAI_Browser_{BrowserType}_{Guid.NewGuid():N}");

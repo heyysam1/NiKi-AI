@@ -6,9 +6,8 @@ using NikiAI.Core.Tools;
 namespace NikiAI.Tools;
 
 /// <summary>
-/// Agent tool for reading webpage content via Microsoft Edge or Brave browser automation.
+/// Agent tool for reading webpage content via browser automation.
 /// All returned content is structurally marked as untrusted external data.
-/// Google Chrome is strictly prohibited.
 /// </summary>
 public class BrowserPageReadTool : ITool
 {
@@ -16,7 +15,7 @@ public class BrowserPageReadTool : ITool
 
     public string Id => ToolId;
     public string Name => "Browser Page Read";
-    public string Description => "Navigates to a webpage using Microsoft Edge or Brave and extracts readable content (title, headings, links, text). External content is untrusted data. Chrome is prohibited.";
+    public string Description => "Navigates to a webpage using browser automation and extracts readable content (title, headings, links, text). External content is untrusted data.";
     public ToolRiskLevel RiskLevel => ToolRiskLevel.LowRiskReversible;
     public TimeSpan DefaultTimeout => TimeSpan.FromSeconds(30);
 
@@ -54,16 +53,6 @@ public class BrowserPageReadTool : ITool
                 return ToolResult.Failure(call.CallId, Id, "URL cannot be empty.", stopwatch.Elapsed);
             }
 
-            if (url.Contains("chrome", StringComparison.OrdinalIgnoreCase))
-            {
-                stopwatch.Stop();
-                return ToolResult.Failure(
-                    call.CallId,
-                    Id,
-                    "Policy Violation: Google Chrome operations are prohibited. Niki AI uses Microsoft Edge or Brave.",
-                    stopwatch.Elapsed);
-            }
-
             TimeSpan? customTimeout = null;
             if (root.TryGetProperty("timeout_seconds", out var timeoutElem) && timeoutElem.TryGetInt32(out var sec))
             {
@@ -98,11 +87,6 @@ public class BrowserPageReadTool : ITool
         {
             stopwatch.Stop();
             return ToolResult.Failure(call.CallId, Id, $"Blocked navigation: {ex.Message}", stopwatch.Elapsed);
-        }
-        catch (ChromeProhibitedException ex)
-        {
-            stopwatch.Stop();
-            return ToolResult.Failure(call.CallId, Id, ex.Message, stopwatch.Elapsed);
         }
         catch (BrowserUnavailableException ex)
         {

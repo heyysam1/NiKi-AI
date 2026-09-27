@@ -32,19 +32,31 @@ public class ApprovedAppRegistryTests
     }
 
     [Theory]
-    [InlineData("chrome")]
-    [InlineData("Google Chrome")]
-    [InlineData("google-chrome")]
-    [InlineData("chrome.exe")]
-    [InlineData("GoogleChrome")]
-    [InlineData("my-chrome-app")]
-    public void IsProhibitedApp_GoogleChrome_ReturnsTrueWithReason(string chromeTarget)
+    [InlineData("cmd")]
+    [InlineData("cmd.exe")]
+    [InlineData("powershell")]
+    [InlineData("powershell.exe")]
+    [InlineData("pwsh")]
+    [InlineData("bash")]
+    public void IsProhibitedApp_CommandShells_ReturnsTrueWithReason(string shellTarget)
     {
-        var prohibited = _registry.IsProhibitedApp(chromeTarget, out var reason);
+        var prohibited = _registry.IsProhibitedApp(shellTarget, out var reason);
 
         Assert.True(prohibited);
         Assert.NotNull(reason);
-        Assert.Contains("Policy Violation: Google Chrome is prohibited on this system", reason);
+        Assert.Contains("restricted command shell", reason);
+    }
+
+    [Theory]
+    [InlineData("chrome")]
+    [InlineData("Google Chrome")]
+    [InlineData("chrome.exe")]
+    public void IsProhibitedApp_Chrome_ReturnsFalse(string chromeTarget)
+    {
+        var prohibited = _registry.IsProhibitedApp(chromeTarget, out var reason);
+
+        Assert.False(prohibited);
+        Assert.Null(reason);
     }
 
     [Theory]

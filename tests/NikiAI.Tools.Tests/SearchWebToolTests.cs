@@ -47,16 +47,15 @@ public class SearchWebToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ChromeAutomationQuery_Rejected()
+    public async Task ExecuteAsync_ChromeAutomationQuery_Accepted()
     {
         var tool = new SearchWebTool(_searchService);
         var call = new ToolCall("s2", "search_web", """{ "query": "how to automate chrome in python" }""", DateTimeOffset.UtcNow);
 
         var result = await tool.ExecuteAsync(call);
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains("Google Chrome operations are prohibited", result.ErrorMessage);
-        Assert.Null(_searchService.LastQuery);
+        Assert.True(result.IsSuccess);
+        Assert.Equal("how to automate chrome in python", _searchService.LastQuery);
     }
 
     [Fact]

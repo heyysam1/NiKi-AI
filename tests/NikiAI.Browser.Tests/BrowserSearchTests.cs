@@ -104,7 +104,7 @@ public class BrowserSearchTests
     }
 
     [Fact]
-    public async Task BrowserSearchTool_ExecuteAsync_ChromeQuery_ReturnsPolicyFailure()
+    public async Task BrowserSearchTool_ExecuteAsync_ChromeQuery_ReturnsSuccess()
     {
         var mockProvider = new DeterministicMockSearchProvider();
         await using var engine = new BrowserAutomationEngine(
@@ -116,7 +116,8 @@ public class BrowserSearchTests
 
         var result = await tool.ExecuteAsync(call);
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains("Google Chrome operations are prohibited", result.ErrorMessage);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.OutputJson);
+        Assert.Contains("download Google Chrome", result.OutputJson);
     }
 }

@@ -309,7 +309,14 @@ public partial class App : System.Windows.Application
         services.AddSingleton<WpfApprovalPromptHandler>();
         services.AddSingleton<IApprovalPromptHandler>(sp => sp.GetRequiredService<WpfApprovalPromptHandler>());
         services.AddSingleton<IPermissionEngine, PermissionEngine>();
-        services.AddSingleton<IBrowserService, BrowserService>();
+        services.AddSingleton<IBrowserAdapterRegistry>(sp =>
+        {
+            var registry = new BrowserAdapterRegistry();
+            registry.RegisterAdapter(new ChromiumCdpAdapter());
+            return registry;
+        });
+        services.AddSingleton<IBrowserService>(sp =>
+            new BrowserService(SupportedBrowser.Edge, sp.GetRequiredService<IBrowserAdapterRegistry>()));
 
         // Character Runtime Singletons (Phase 2)
         services.AddSingleton<ICharacterStateMachine, CharacterStateMachine>();

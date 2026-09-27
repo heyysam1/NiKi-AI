@@ -56,11 +56,22 @@ public class MockAgentProvider : AgentProviderBase
         };
     }
 
+    public Func<ChatCompletionRequest, ChatCompletionResponse>? CustomResponseHandler { get; set; }
+
     public override async Task<ChatCompletionResponse> GenerateResponseAsync(
         ChatCompletionRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        if (CustomResponseHandler != null)
+        {
+            if (SimulatedLatencyMs > 0)
+            {
+                await Task.Delay((int)SimulatedLatencyMs, cancellationToken);
+            }
+            return CustomResponseHandler(request);
+        }
 
         if (SimulatedLatencyMs > 0)
         {

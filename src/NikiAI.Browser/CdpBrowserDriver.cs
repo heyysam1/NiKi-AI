@@ -40,12 +40,11 @@ public class CdpBrowserDriver : IBrowserDriver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(url);
 
-        // Security check: block chrome://, javascript:, data:
+        // Security check: block internal browser schemes chrome://, chrome-extension://, javascript:, data:
         if (url.StartsWith("chrome://", StringComparison.OrdinalIgnoreCase) ||
-            url.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase) ||
-            url.Contains("chrome", StringComparison.OrdinalIgnoreCase))
+            url.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase))
         {
-            throw new BlockedNavigationException($"Navigation to Chrome-related URL ('{url}') is prohibited.");
+            throw new BlockedNavigationException($"Navigation to internal browser URL ('{url}') is prohibited.");
         }
 
         if (url.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||

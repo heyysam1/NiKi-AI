@@ -45,15 +45,6 @@ public class BrowserAutomationEngine : IBrowserAutomationEngine
         }
 
         var trimmedQuery = query.Trim();
-        BrowserGuardrail.AssertNotChrome(trimmedQuery);
-
-        if (trimmedQuery.Contains("install chrome", StringComparison.OrdinalIgnoreCase) ||
-            trimmedQuery.Contains("download chrome", StringComparison.OrdinalIgnoreCase) ||
-            trimmedQuery.Contains("automate chrome", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ChromeProhibitedException("Google Chrome operations are prohibited by Niki AI security policy.");
-        }
-
         cancellationToken.ThrowIfCancellationRequested();
         var count = Math.Clamp(maxResults, 1, 10);
 

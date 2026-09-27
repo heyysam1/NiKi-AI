@@ -209,6 +209,32 @@ public partial class CompanionWindow : Window
         _movementTimer.Start();
     }
 
+    private MainWindow? _mainWindow;
+
+    public void InitializeMainWindow(MainWindow mainWindow)
+    {
+        _mainWindow = mainWindow;
+    }
+
+    public void OpenMainWindow()
+    {
+        if (_mainWindow == null) return;
+
+        if (!_mainWindow.IsLoaded)
+        {
+            _mainWindow.Show();
+        }
+        else
+        {
+            if (_mainWindow.WindowState == WindowState.Minimized)
+            {
+                _mainWindow.WindowState = WindowState.Normal;
+            }
+            _mainWindow.Show();
+            _mainWindow.Activate();
+        }
+    }
+
     public void InitializeChatWindow(ChatWindow chatWindow)
     {
         _chatWindow = chatWindow;
@@ -240,6 +266,12 @@ public partial class CompanionWindow : Window
 
     public void OpenChatWindow()
     {
+        if (_mainWindow != null)
+        {
+            OpenMainWindow();
+            return;
+        }
+
         if (_chatWindow == null) return;
 
         if (!_chatWindow.IsLoaded)

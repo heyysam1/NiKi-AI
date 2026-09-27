@@ -4,13 +4,52 @@ using NikiAI.Core.Tools;
 namespace NikiAI.Core.Agent;
 
 /// <summary>
+/// Definition of a tool exposed to the AI model for function calling.
+/// </summary>
+public record ToolDefinition(
+    string Name,
+    string Description,
+    string ParametersJsonSchema
+);
+
+/// <summary>
+/// Represents a tool invocation requested by the AI model.
+/// </summary>
+public record AgentToolCall(
+    string CallId,
+    string ToolName,
+    string ArgumentsJson
+);
+
+/// <summary>
+/// Structured result returned from executing a tool call.
+/// </summary>
+public record AgentToolResult(
+    string CallId,
+    string ToolName,
+    bool IsSuccess,
+    string ContentJson,
+    string? ErrorMessage = null
+);
+
+/// <summary>
 /// Represents a single message in an LLM conversation.
 /// </summary>
-public record AgentMessage(string Role, string Content, DateTimeOffset? Timestamp = null)
+public record AgentMessage(
+    string Role, 
+    string Content, 
+    DateTimeOffset? Timestamp = null,
+    IReadOnlyList<AgentToolCall>? ToolCalls = null,
+    string? ToolCallId = null,
+    string? ToolName = null
+)
 {
     public static AgentMessage System(string content) => new("system", content, DateTimeOffset.UtcNow);
     public static AgentMessage User(string content) => new("user", content, DateTimeOffset.UtcNow);
-    public static AgentMessage Assistant(string content) => new("assistant", content, DateTimeOffset.UtcNow);
+    public static AgentMessage Assistant(string content, IReadOnlyList<AgentToolCall>? toolCalls = null) => 
+        new("assistant", content, DateTimeOffset.UtcNow, ToolCalls: toolCalls);
+    public static AgentMessage Tool(string toolCallId, string toolName, string content) => 
+        new("tool", content, DateTimeOffset.UtcNow, ToolCallId: toolCallId, ToolName: toolName);
 }
 
 /// <summary>
@@ -26,7 +65,8 @@ public record ChatCompletionRequest(
     string? Model = null,
     double? Temperature = null,
     int? MaxTokens = null,
-    string? SystemPrompt = null
+    string? SystemPrompt = null,
+    IReadOnlyList<ToolDefinition>? Tools = null
 );
 
 /// <summary>
@@ -36,8 +76,12 @@ public record ChatCompletionResponse(
     string Content,
     string? Model = null,
     TokenUsage? Usage = null,
-    string? FinishReason = null
-);
+    string? FinishReason = null,
+    IReadOnlyList<AgentToolCall>? ToolCalls = null
+)
+{
+    public bool HasToolCalls => ToolCalls != null && ToolCalls.Count > 0;
+}
 
 /// <summary>
 /// Result of an explicit connection/diagnostic test to an AI provider.
@@ -113,12 +157,4 @@ public interface IAgentProvider
         var response = await GenerateResponseAsync(request, cancellationToken);
         return response.Content;
     }
-}
-
-/// <summary>
-/// Agent task planner interface.
-/// </summary>
-public interface IAgentPlanner
-{
-    Task<IReadOnlyList<ToolCall>> PlanTaskStepsAsync(AgentTask task, CancellationToken cancellationToken = default);
 }

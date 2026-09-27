@@ -196,3 +196,66 @@ public static class PromptInjectionDetector
         """;
     }
 }
+
+/// <summary>
+/// Major browser rendering and engine families.
+/// </summary>
+public enum BrowserFamily
+{
+    Chromium,
+    Gecko,
+    WebKit,
+    Custom
+}
+
+/// <summary>
+/// Descriptive metadata describing an installed browser candidate.
+/// CandidateAdapterKey is descriptive only and does not bypass capability verification.
+/// </summary>
+public record BrowserDescriptor(
+    string BrowserId,
+    string FriendlyName,
+    string ExecutablePath,
+    BrowserFamily Family,
+    string? CandidateAdapterKey = null
+);
+
+/// <summary>
+/// Options for launching or attaching to a browser instance.
+/// </summary>
+public record BrowserLaunchOptions(
+    bool Headless = false,
+    int RemoteDebuggingPort = 0,
+    TimeSpan Timeout = default
+);
+
+/// <summary>
+/// Active connection to an automated browser instance.
+/// </summary>
+public interface IBrowserConnection : IAsyncDisposable
+{
+    bool IsConnected { get; }
+    Task<string> NavigateAsync(string url, TimeSpan timeout, CancellationToken cancellationToken = default);
+    Task<T?> EvaluateScriptAsync<T>(string expression, TimeSpan timeout, CancellationToken cancellationToken = default);
+    Task CloseAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Adapter contract for automating a browser. Selection must be based on verified runtime capabilities.
+/// </summary>
+public interface IBrowserAdapter
+{
+    string AdapterKey { get; }
+    Task<bool> CanAutomateAsync(BrowserDescriptor descriptor, CancellationToken cancellationToken = default);
+    Task<IBrowserConnection> LaunchOrAttachAsync(BrowserDescriptor descriptor, BrowserLaunchOptions options, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Registry responsible for selecting compatible adapters based on verified capabilities.
+/// </summary>
+public interface IBrowserAdapterRegistry
+{
+    void RegisterAdapter(IBrowserAdapter adapter);
+    Task<IBrowserAdapter?> ResolveAdapterAsync(BrowserDescriptor descriptor, CancellationToken cancellationToken = default);
+    IReadOnlyList<IBrowserAdapter> GetRegisteredAdapters();
+}

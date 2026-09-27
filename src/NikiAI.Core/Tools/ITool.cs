@@ -73,3 +73,13 @@ public interface ITool
 
     Task<ToolResult> ExecuteAsync(ToolCall call, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Read-only catalog providing tool definitions/schemas and persistence metadata to AgentOperator.
+/// Contains NO execution logic.
+/// </summary>
+public interface IToolCatalog
+{
+    IReadOnlyList<NikiAI.Core.Agent.ToolDefinition> GetToolDefinitions();
+    bool RequiresDurablePersistence(string toolName);
+}

@@ -7,7 +7,9 @@ namespace NikiAI.Core.Browser;
 public enum SupportedBrowser
 {
     Edge,
-    Brave
+    Brave,
+    Chrome,
+    Custom
 }
 
 /// <summary>

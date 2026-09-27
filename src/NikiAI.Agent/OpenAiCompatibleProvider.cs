@@ -34,11 +34,53 @@ public class OpenAiCompatibleProvider : AgentProviderBase
         _logger = logger;
     }
 
+    public async Task LoadConfigFromStoreAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var endpoint = await _secureSettingsStore.GetSecretAsync("ai_provider_endpoint", cancellationToken);
+            if (!string.IsNullOrWhiteSpace(endpoint))
+            {
+                Config.EndpointUrl = endpoint.Trim();
+            }
+
+            var model = await _secureSettingsStore.GetSecretAsync("ai_provider_model", cancellationToken);
+            if (!string.IsNullOrWhiteSpace(model))
+            {
+                Config.ModelName = model.Trim();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to load provider configuration from secure store.");
+        }
+    }
+
+    public async Task SaveConfigToStoreAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(Config.EndpointUrl))
+            {
+                await _secureSettingsStore.SetSecretAsync("ai_provider_endpoint", Config.EndpointUrl.Trim(), cancellationToken);
+            }
+            if (!string.IsNullOrWhiteSpace(Config.ModelName))
+            {
+                await _secureSettingsStore.SetSecretAsync("ai_provider_model", Config.ModelName.Trim(), cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to save provider configuration to secure store.");
+        }
+    }
+
     public override async Task<ConnectionTestResult> TestConnectionAsync(CancellationToken cancellationToken = default)
     {
         var sw = Stopwatch.StartNew();
         try
         {
+            await LoadConfigFromStoreAsync(cancellationToken);
             var apiKey = await _secureSettingsStore.GetSecretAsync(Config.ApiKeySecretKey, cancellationToken);
             var endpoint = GetEndpointUrl();
 
@@ -122,15 +164,44 @@ public class OpenAiCompatibleProvider : AgentProviderBase
         }
 
         var messagesList = BuildMessagesPayload(request);
-        var payload = new
+        var payloadDict = new Dictionary<string, object?>
         {
-            model = request.Model ?? Config.ModelName,
-            messages = messagesList,
-            temperature = request.Temperature ?? Config.Temperature,
-            max_tokens = request.MaxTokens ?? Config.MaxTokens
+            ["model"] = request.Model ?? Config.ModelName,
+            ["messages"] = messagesList,
+            ["temperature"] = request.Temperature ?? Config.Temperature,
+            ["max_tokens"] = request.MaxTokens ?? Config.MaxTokens
         };
 
-        req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        if (request.Tools != null && request.Tools.Count > 0)
+        {
+            var toolsList = request.Tools.Select(t =>
+            {
+                object schemaObj;
+                try
+                {
+                    schemaObj = JsonSerializer.Deserialize<JsonElement>(t.ParametersJsonSchema);
+                }
+                catch
+                {
+                    schemaObj = new { type = "object", properties = new { } };
+                }
+
+                return new
+                {
+                    type = "function",
+                    function = new
+                    {
+                        name = t.Name,
+                        description = t.Description,
+                        parameters = schemaObj
+                    }
+                };
+            }).ToList();
+
+            payloadDict["tools"] = toolsList;
+        }
+
+        req.Content = new StringContent(JsonSerializer.Serialize(payloadDict), Encoding.UTF8, "application/json");
 
         using var res = await _httpClient.SendAsync(req, cancellationToken);
         if (!res.IsSuccessStatusCode)
@@ -154,7 +225,23 @@ public class OpenAiCompatibleProvider : AgentProviderBase
 
             var firstChoice = choices[0];
             var message = firstChoice.GetProperty("message");
-            var content = message.GetProperty("content").GetString() ?? string.Empty;
+            var content = message.TryGetProperty("content", out var cProp) ? (cProp.GetString() ?? string.Empty) : string.Empty;
+
+            List<AgentToolCall>? toolCalls = null;
+            if (message.TryGetProperty("tool_calls", out var tcProp) && tcProp.ValueKind == JsonValueKind.Array)
+            {
+                toolCalls = new List<AgentToolCall>();
+                foreach (var tc in tcProp.EnumerateArray())
+                {
+                    var id = tc.TryGetProperty("id", out var idProp) ? (idProp.GetString() ?? Guid.NewGuid().ToString()) : Guid.NewGuid().ToString();
+                    if (tc.TryGetProperty("function", out var fnProp))
+                    {
+                        var name = fnProp.TryGetProperty("name", out var nProp) ? (nProp.GetString() ?? string.Empty) : string.Empty;
+                        var args = fnProp.TryGetProperty("arguments", out var aProp) ? (aProp.GetString() ?? "{}") : "{}";
+                        toolCalls.Add(new AgentToolCall(id, name, args));
+                    }
+                }
+            }
 
             string? finishReason = firstChoice.TryGetProperty("finish_reason", out var finishProp)
                 ? finishProp.GetString()
@@ -173,7 +260,7 @@ public class OpenAiCompatibleProvider : AgentProviderBase
                 usage = new TokenUsage(pTokens, cTokens, tTokens);
             }
 
-            return new ChatCompletionResponse(content, model, usage, finishReason);
+            return new ChatCompletionResponse(content, model, usage, finishReason, toolCalls);
         }
         catch (JsonException ex)
         {
@@ -281,7 +368,40 @@ public class OpenAiCompatibleProvider : AgentProviderBase
 
         foreach (var msg in request.Messages)
         {
-            list.Add(new { role = msg.Role, content = msg.Content });
+            if (msg.Role == "assistant" && msg.ToolCalls != null && msg.ToolCalls.Count > 0)
+            {
+                var toolCallsPayload = msg.ToolCalls.Select(tc => new
+                {
+                    id = tc.CallId,
+                    type = "function",
+                    function = new
+                    {
+                        name = tc.ToolName,
+                        arguments = tc.ArgumentsJson
+                    }
+                }).ToArray();
+
+                list.Add(new
+                {
+                    role = "assistant",
+                    content = msg.Content ?? string.Empty,
+                    tool_calls = toolCallsPayload
+                });
+            }
+            else if (msg.Role == "tool")
+            {
+                list.Add(new
+                {
+                    role = "tool",
+                    tool_call_id = msg.ToolCallId ?? string.Empty,
+                    name = msg.ToolName ?? string.Empty,
+                    content = msg.Content
+                });
+            }
+            else
+            {
+                list.Add(new { role = msg.Role, content = msg.Content });
+            }
         }
 
         return list;

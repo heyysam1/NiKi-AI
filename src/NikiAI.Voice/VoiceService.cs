@@ -14,6 +14,7 @@ public class VoiceService : IVoiceService, IDisposable
 {
     private readonly ISpeechToTextService _sttService;
     private readonly ITextToSpeechService _ttsService;
+    private readonly IAgentOperator? _agentOperator;
     private readonly IAgentProvider? _agentProvider;
     private readonly ILogger<VoiceService>? _logger;
     private VoiceSessionState _state = VoiceSessionState.Idle;
@@ -48,11 +49,13 @@ public class VoiceService : IVoiceService, IDisposable
     public VoiceService(
         ISpeechToTextService sttService,
         ITextToSpeechService ttsService,
+        IAgentOperator? agentOperator = null,
         IAgentProvider? agentProvider = null,
         ILogger<VoiceService>? logger = null)
     {
         _sttService = sttService ?? throw new ArgumentNullException(nameof(sttService));
         _ttsService = ttsService ?? throw new ArgumentNullException(nameof(ttsService));
+        _agentOperator = agentOperator;
         _agentProvider = agentProvider;
         _logger = logger;
     }
@@ -170,7 +173,19 @@ public class VoiceService : IVoiceService, IDisposable
 
         try
         {
-            if (_agentProvider != null)
+            if (_agentOperator != null)
+            {
+                try
+                {
+                    var opResponse = await _agentOperator.ExecutePromptAsync(prompt, _activeCts?.Token ?? CancellationToken.None);
+                    responseText = opResponse.ResponseText;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "AgentOperator execution failed for voice command '{Prompt}'.", prompt);
+                }
+            }
+            else if (_agentProvider != null)
             {
                 try
                 {

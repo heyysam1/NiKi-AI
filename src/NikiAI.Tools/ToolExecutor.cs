@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using NikiAI.Core.Agent;
 using NikiAI.Core.Logging;
 using NikiAI.Core.Security;
+using NikiAI.Core.Tasks;
 using NikiAI.Core.Tools;
 
 namespace NikiAI.Tools;
@@ -13,6 +15,11 @@ public interface IToolExecutor
 {
     Task<ToolResult> ExecuteAsync(
         ToolCall call,
+        string? taskId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<AgentToolResult> ExecuteAgentToolCallAsync(
+        AgentToolCall call,
         string? taskId = null,
         CancellationToken cancellationToken = default);
 }
@@ -31,17 +38,20 @@ public class ToolExecutor : IToolExecutor
     private readonly IToolRegistry _toolRegistry;
     private readonly IPermissionEngine _permissionEngine;
     private readonly IToolAuditLogger _auditLogger;
+    private readonly ITaskRepository? _taskRepository;
     private readonly ILogger<ToolExecutor>? _logger;
 
     public ToolExecutor(
         IToolRegistry toolRegistry,
         IPermissionEngine permissionEngine,
         IToolAuditLogger auditLogger,
+        ITaskRepository? taskRepository = null,
         ILogger<ToolExecutor>? logger = null)
     {
         _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
         _permissionEngine = permissionEngine ?? throw new ArgumentNullException(nameof(permissionEngine));
         _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
+        _taskRepository = taskRepository;
         _logger = logger;
     }
 
@@ -93,6 +103,18 @@ public class ToolExecutor : IToolExecutor
         {
             if (permissionResult.RequiresUserPrompt && permissionResult.PromptRequest != null)
             {
+                if (!string.IsNullOrWhiteSpace(taskId) && _taskRepository != null)
+                {
+                    try
+                    {
+                        await _taskRepository.TransitionStatusAsync(taskId, AgentTaskStatus.NeedsApproval, "Waiting for user approval.", cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Failed to transition task '{TaskId}' to NeedsApproval.", taskId);
+                    }
+                }
+
                 ApprovalDecisionResult approvalResult;
                 try
                 {
@@ -102,11 +124,21 @@ public class ToolExecutor : IToolExecutor
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    if (!string.IsNullOrWhiteSpace(taskId) && _taskRepository != null)
+                    {
+                        try { await _taskRepository.TransitionStatusAsync(taskId, AgentTaskStatus.Cancelled, "Tool approval was cancelled by user.", CancellationToken.None); } catch { }
+                    }
                     return ToolResult.Failure(call.CallId, tool.Id, "Tool execution was cancelled by user.", TimeSpan.Zero);
                 }
 
                 if (approvalResult.Outcome != ApprovalOutcome.Approved)
                 {
+                    if (!string.IsNullOrWhiteSpace(taskId) && _taskRepository != null)
+                    {
+                        var targetStatus = approvalResult.Outcome == ApprovalOutcome.Cancelled ? AgentTaskStatus.Cancelled : AgentTaskStatus.Failed;
+                        try { await _taskRepository.TransitionStatusAsync(taskId, targetStatus, $"Tool approval was not granted ({approvalResult.Outcome}).", CancellationToken.None); } catch { }
+                    }
+
                     string failReason = approvalResult.Outcome switch
                     {
                         ApprovalOutcome.Denied => $"Permission Denied: User denied approval for tool '{tool.Id}'.",
@@ -118,7 +150,18 @@ public class ToolExecutor : IToolExecutor
                     return ToolResult.Failure(call.CallId, tool.Id, failReason, TimeSpan.Zero);
                 }
 
-                // Approved (AllowOnce or AlwaysAllow): proceed to execution!
+                // Approved (AllowOnce or AlwaysAllow): transition back to Running and proceed to execution!
+                if (!string.IsNullOrWhiteSpace(taskId) && _taskRepository != null)
+                {
+                    try
+                    {
+                        await _taskRepository.TransitionStatusAsync(taskId, AgentTaskStatus.Running, "User approved execution; resuming running state.", cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Failed to transition task '{TaskId}' back to Running.", taskId);
+                    }
+                }
             }
             else
             {
@@ -197,5 +240,30 @@ public class ToolExecutor : IToolExecutor
         {
             _logger?.LogError(ex, "Failed to record audit record for tool call '{CallId}'.", call.CallId);
         }
+    }
+
+    public async Task<AgentToolResult> ExecuteAgentToolCallAsync(
+        AgentToolCall call,
+        string? taskId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(call);
+
+        var toolCall = new ToolCall(
+            call.CallId,
+            call.ToolName,
+            call.ArgumentsJson ?? "{}",
+            DateTimeOffset.UtcNow);
+
+        var result = await ExecuteAsync(toolCall, taskId, cancellationToken);
+
+        return new AgentToolResult(
+            call.CallId,
+            call.ToolName,
+            result.IsSuccess,
+            result.IsSuccess
+                ? (result.OutputJson ?? "{}")
+                : (result.ErrorMessage ?? "Tool execution failed."),
+            result.ErrorMessage);
     }
 }
